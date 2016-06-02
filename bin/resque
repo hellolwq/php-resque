@@ -93,9 +93,19 @@ if(!empty($PREFIX)) {
     Resque_Redis::prefix($PREFIX);
 }
 
+$PIDFILE = getenv('PIDFILE');
+
 if($count > 1) {
     for($i = 0; $i < $count; ++$i) {
         $pid = Resque::fork();
+        //record the pid
+        if($pid > 0) {
+            if ($PIDFILE) {
+                file_put_contents($PIDFILE, $pid." ",FILE_APPEND) or
+                die('Could not write PID information to ' . $PIDFILE);
+            }
+        }
+
         if($pid == -1) {
             $logger->log(Psr\Log\LogLevel::EMERGENCY, 'Could not fork worker {count}', array('count' => $i));
             die();
@@ -117,7 +127,6 @@ else {
     $worker = new Resque_Worker($queues);
     $worker->setLogger($logger);
 
-    $PIDFILE = getenv('PIDFILE');
     if ($PIDFILE) {
         file_put_contents($PIDFILE, getmypid()) or
             die('Could not write PID information to ' . $PIDFILE);
